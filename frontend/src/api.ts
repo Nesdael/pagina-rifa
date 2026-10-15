@@ -25,7 +25,7 @@ export interface ConfigRifa {
   fechaSorteo: string
   whatsapp: string
   minutosApartado: number
-  ganador: string | null
+  ganador: number | null
 }
 
 // Si el backend responde con error, sacamos el mensaje para mostrarlo
@@ -67,6 +67,16 @@ export const liberar = (clave: string, numero: number) =>
     method: 'POST',
     headers: adminHeaders(clave),
   })
+
+export const anunciarGanador = (clave: string, numero: number) =>
+  pedir<unknown>('/api/admin/ganador', {
+    method: 'POST',
+    headers: { ...adminHeaders(clave), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ numero }),
+  })
+
+export const quitarGanador = (clave: string) =>
+  pedir<unknown>('/api/admin/ganador', { method: 'DELETE', headers: adminHeaders(clave) })
 
 // ---- Utilidades de formato ----
 export const dosCifras = (n: number) => String(n).padStart(2, '0')

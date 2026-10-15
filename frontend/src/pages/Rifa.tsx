@@ -91,7 +91,7 @@ export default function Rifa() {
     return <main className="pagina"><p className="cargando">{error ?? 'Cargando la rifa…'}</p></main>
   }
 
-  const ganador = config.ganador !== null ? Number(config.ganador) : null
+  const ganador = config.ganador
   const quedan = numeros.filter((n) => n.estado === 'disponible').length
   const horas = config.minutosApartado / 60
   const tiempoApartado = horas >= 1 ? `${horas} ${horas === 1 ? 'hora' : 'horas'}` : `${config.minutosApartado} minutos`

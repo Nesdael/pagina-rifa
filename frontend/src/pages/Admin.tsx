@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
+  anunciarGanador,
   confirmarPago,
   dosCifras,
   getConfig,
   getNumerosAdmin,
   liberar,
   pesos,
+  quitarGanador,
   type ConfigRifa,
   type NumeroAdmin,
 } from '../api'
@@ -56,6 +58,9 @@ export default function Admin() {
   const [ocupado, setOcupado] = useState(false)
   // Persona que se va a liberar (abre la ventana de confirmación)
   const [porLiberar, setPorLiberar] = useState<Persona | null>(null)
+  // Ganador: lo que se escribe en el campo y qué ventana está abierta
+  const [cifrasGanador, setCifrasGanador] = useState('')
+  const [dialogoGanador, setDialogoGanador] = useState<'anunciar' | 'quitar' | null>(null)
   // Mensaje corto que aparece abajo después de cada acción
   const [aviso, setAviso] = useState<string | null>(null)
 
@@ -67,7 +72,9 @@ export default function Admin() {
 
   const cargar = useCallback(async (c: string) => {
     try {
-      setNumeros(await getNumerosAdmin(c))
+      const [lista, conf] = await Promise.all([getNumerosAdmin(c), getConfig()])
+      setNumeros(lista)
+      setConfig(conf)
       setError(null)
     } catch (e) {
       setError((e as Error).message)
@@ -115,6 +122,26 @@ export default function Admin() {
     }
   }
 
+  async function guardarGanador(tipo: 'anunciar' | 'quitar') {
+    setDialogoGanador(null)
+    setOcupado(true)
+    try {
+      if (tipo === 'anunciar') {
+        await anunciarGanador(clave, Number(cifrasGanador))
+        setAviso(`Ganador anunciado: ${cifrasGanador.padStart(2, '0')}`)
+        setCifrasGanador('')
+      } else {
+        await quitarGanador(clave)
+        setAviso('Se quitó el ganador. La rifa está abierta otra vez')
+      }
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setOcupado(false)
+      cargar(clave)
+    }
+  }
+
   function confirmarLiberar() {
     if (porLiberar) accion('liberar', porLiberar)
     setPorLiberar(null)
@@ -150,6 +177,12 @@ export default function Admin() {
   const total = 100 * config.precio
   const faltaPremio = config.premio - recogido
 
+  // Para el ganador: el escrito en el campo (al anunciar) o el ya guardado
+  const cifrasValidas = /^\d{1,2}$/.test(cifrasGanador)
+  const numeroGanador = config.ganador ?? (cifrasValidas ? Number(cifrasGanador) : null)
+  const datosGanador = numeroGanador !== null ? numeros.find((n) => n.numero === numeroGanador) : undefined
+  const ganadorPago = datosGanador?.estado === 'pagado'
+
   return (
     <main className="pagina admin">
       <header className="admin-top">
@@ -158,6 +191,56 @@ export default function Admin() {
           Salir
         </button>
       </header>
+
+
+      <section className={`caja-sorteo ${config.ganador !== null ? 'con-ganador' : ''}`} aria-label="Número ganador">
+        {config.ganador === null ? (
+          <>
+            <h2>Número ganador</h2>
+            <p className="caja-nota">
+              Cuando juegue el {config.loteria}, escribe las dos últimas cifras y anúncialo.
+            </p>
+            <form
+              className="form-ganador"
+              onSubmit={(e) => { e.preventDefault(); if (cifrasValidas) setDialogoGanador('anunciar') }}
+            >
+              <input
+                className="input-ganador"
+                value={cifrasGanador}
+                onChange={(e) => setCifrasGanador(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                inputMode="numeric"
+                placeholder="00"
+                aria-label="Dos últimas cifras del ganador"
+              />
+              <button className="btn btn-verde" type="submit" disabled={!cifrasValidas || ocupado}>
+                Anunciar ganador
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <p className="caja-titulo">Número ganador</p>
+            <div className="ganador-fila">
+              <span className="ganador-cifra">{dosCifras(config.ganador)}</span>
+              <div className="persona-datos">
+                {ganadorPago && datosGanador ? (
+                  <>
+                    <strong>{datosGanador.nombre}</strong>
+                    <a href={`https://wa.me/57${datosGanador.telefono}`} target="_blank" rel="noreferrer">
+                      WhatsApp {datosGanador.telefono}
+                    </a>
+                  </>
+                ) : (
+                  <strong>Este número no se vendió</strong>
+                )}
+              </div>
+            </div>
+            <button type="button" className="btn-texto" disabled={ocupado} onClick={() => setDialogoGanador('quitar')}>
+              Corregir ganador
+            </button>
+          </>
+        )}
+      </section>
 
       <section className="caja-plata" aria-label="Dinero recogido">
         <p className="caja-titulo">Recogido</p>
@@ -271,6 +354,37 @@ export default function Admin() {
             )}
           </>
         )}
+      </ConfirmarDialogo>
+
+      <ConfirmarDialogo
+        abierto={dialogoGanador === 'anunciar'}
+        titulo={`¿Anunciar el ${cifrasGanador.padStart(2, '0')} como ganador?`}
+        textoConfirmar="Sí, anunciar"
+        onConfirmar={() => guardarGanador('anunciar')}
+        onCancelar={() => setDialogoGanador(null)}
+      >
+        <span className="ficha ficha-grande">{cifrasGanador.padStart(2, '0')}</span>
+        {ganadorPago && datosGanador ? (
+          <p>Lo compró <strong>{datosGanador.nombre}</strong> ({datosGanador.telefono}).</p>
+        ) : datosGanador?.estado === 'apartado' && !datosGanador.vencido ? (
+          <p className="dialogo-alerta">
+            Está apartado por {datosGanador.nombre}, pero el pago no está confirmado.
+          </p>
+        ) : (
+          <p className="dialogo-alerta">Este número no se vendió.</p>
+        )}
+        <p>La página mostrará el número ganador y ya nadie podrá apartar números.</p>
+      </ConfirmarDialogo>
+
+      <ConfirmarDialogo
+        abierto={dialogoGanador === 'quitar'}
+        titulo="¿Quitar el ganador?"
+        textoConfirmar="Sí, quitar"
+        peligro
+        onConfirmar={() => guardarGanador('quitar')}
+        onCancelar={() => setDialogoGanador(null)}
+      >
+        <p>Úsalo solo si te equivocaste al escribirlo. La rifa vuelve a quedar abierta y la gente podrá apartar números otra vez.</p>
       </ConfirmarDialogo>
 
       {aviso && <p className="aviso" role="status">{aviso}</p>}
