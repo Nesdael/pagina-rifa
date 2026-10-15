@@ -7,6 +7,18 @@ type Paso = 'eligiendo' | 'formulario' | 'listo'
 
 const REFRESCO_MS = 10_000
 
+// "Faltan 15 días para el sorteo"
+function textoFaltan(fechaSorteo: string): string {
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const sorteo = new Date(fechaSorteo + 'T00:00:00')
+  const dias = Math.round((sorteo.getTime() - hoy.getTime()) / 86_400_000)
+  if (dias > 1) return `Faltan ${dias} días para el sorteo`
+  if (dias === 1) return '¡El sorteo es mañana!'
+  if (dias === 0) return '¡Hoy es el sorteo!'
+  return 'Esperando el resultado del sorteo'
+}
+
 export default function Rifa() {
   const [config, setConfig] = useState<ConfigRifa | null>(null)
   const [numeros, setNumeros] = useState<NumeroPublico[]>([])
@@ -26,6 +38,12 @@ export default function Rifa() {
     } catch {
       /* si falla un refresco, se intenta en el siguiente */
     }
+  }, [])
+
+  // Fondo de noche solo en la página de la rifa (el admin queda claro)
+  useEffect(() => {
+    document.body.classList.add('noche')
+    return () => document.body.classList.remove('noche')
   }, [])
 
   // Carga inicial + refresco cada 10 segundos
@@ -81,16 +99,41 @@ export default function Rifa() {
 
   return (
     <main className="pagina">
-      <header className="encabezado">
-        <h1>
-          <span className="titulo-chico">Rifa de</span>
-          <span className="premio">{pesos(config.premio)}</span>
-        </h1>
-        <p className="detalle">
-          Juega el {fechaLarga(config.fechaSorteo)} con las dos últimas cifras del {config.loteria}.
-          Cada número vale <strong>{pesos(config.precio)}</strong>.
+      <header className="portada">
+        <div className="boleta">
+          <div className="boleta-talon" aria-hidden="true">
+            <span>N.º 00 al 99</span>
+          </div>
+          <div className="boleta-cuerpo">
+            <h1>
+              <span className="gana">¡Gánate</span>
+              <span className="premio">{pesos(config.premio)}</span>
+              <span className="efectivo">en efectivo!</span>
+            </h1>
+            <div className="juega">
+              <img src="/sinuano-noche.png" alt={`Lotería ${config.loteria}`} width="600" height="335" />
+              <p>
+                Juega el <strong>{fechaLarga(config.fechaSorteo)}</strong> con las dos últimas cifras del {config.loteria}.
+              </p>
+            </div>
+          </div>
+        </div>
+        <p className="sticker">
+          <strong>{pesos(config.precio)}</strong> el número
         </p>
       </header>
+
+      {ganador === null && (
+        <section className="marcador" aria-label="Cómo va la rifa">
+          <p className="faltan">{textoFaltan(config.fechaSorteo)}</p>
+          <div className="progreso" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={100 - quedan}>
+            <span style={{ width: `${100 - quedan}%` }} />
+          </div>
+          <p className="quedan">
+            {quedan === 0 ? '¡Se vendieron todos!' : <>Quedan <strong>{quedan}</strong> de 100 números</>}
+          </p>
+        </section>
+      )}
 
       {ganador !== null && (
         <section className="aviso-ganador" aria-live="polite">
@@ -130,9 +173,7 @@ export default function Rifa() {
       ) : (
         <>
           {ganador === null && (
-            <p className="instrucciones">
-              Toca los números que quieras. Quedan <strong>{quedan}</strong> de 100.
-            </p>
+            <p className="instrucciones">Toca los números que quieras y apártalos.</p>
           )}
 
           <Cuadricula numeros={numeros} seleccionados={seleccionados} ganador={ganador} onToggle={toggle} />
