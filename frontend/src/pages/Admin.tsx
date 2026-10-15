@@ -64,6 +64,12 @@ export default function Admin() {
     }
   }, [])
 
+  // Mismo fondo de noche que la rifa
+  useEffect(() => {
+    document.body.classList.add('noche')
+    return () => document.body.classList.remove('noche')
+  }, [])
+
   useEffect(() => {
     getConfig().then(setConfig).catch(() => setError('No se pudo cargar la configuración'))
   }, [])
@@ -101,14 +107,15 @@ export default function Admin() {
   if (!clave) {
     return (
       <main className="pagina admin">
-        <form className="hoja-form" onSubmit={entrar}>
+        <form className="hoja-form login" onSubmit={entrar}>
+          <img src="/sinuano-noche.png" alt="" className="logo-chico" width="600" height="335" />
           <h1>Panel de la rifa</h1>
           <label>
             Clave de administrador
             <input type="password" value={entrada} onChange={(e) => setEntrada(e.target.value)} required autoFocus />
           </label>
           {error && <p className="error" role="alert">{error}</p>}
-          <button className="btn" type="submit">Entrar</button>
+          <button className="btn btn-verde" type="submit">Entrar</button>
         </form>
       </main>
     )
@@ -123,6 +130,10 @@ export default function Admin() {
   const porConfirmar = agruparPorPersona(apartados)
   const compradores = agruparPorPersona(pagados)
 
+  const recogido = pagados.length * config.precio
+  const total = 100 * config.precio
+  const faltaPremio = config.premio - recogido
+
   return (
     <main className="pagina admin">
       <header className="admin-top">
@@ -132,34 +143,62 @@ export default function Admin() {
         </button>
       </header>
 
+      <section className="caja-plata" aria-label="Dinero recogido">
+        <p className="caja-titulo">Recogido</p>
+        <p className="caja-monto">{pesos(recogido)}</p>
+        <div className="progreso" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={recogido}>
+          <span style={{ width: `${(recogido / total) * 100}%` }} />
+          <i className="marca-premio" style={{ left: `${(config.premio / total) * 100}%` }} title="Valor del premio" />
+        </div>
+        <p className="caja-nota">
+          {faltaPremio > 0
+            ? <>Faltan <strong>{pesos(faltaPremio)}</strong> para cubrir el premio de {pesos(config.premio)}.</>
+            : <>Ya se cubrió el premio. Ganancia hasta ahora: <strong>{pesos(-faltaPremio)}</strong>.</>}
+          {' '}Si se venden todos: {pesos(total)}.
+        </p>
+      </section>
+
       <dl className="cuentas">
-        <div><dt>Vendidos</dt><dd>{pagados.length}</dd></div>
-        <div><dt>Por confirmar</dt><dd>{apartados.length}</dd></div>
-        <div><dt>Libres</dt><dd>{100 - pagados.length - apartados.length}</dd></div>
-        <div><dt>Recogido</dt><dd>{pesos(pagados.length * config.precio)}</dd></div>
+        <div className="c-vendidos"><dt>Vendidos</dt><dd>{pagados.length}</dd></div>
+        <div className="c-apartados"><dt>Por confirmar</dt><dd>{apartados.length}</dd></div>
+        <div className="c-libres"><dt>Libres</dt><dd>{100 - pagados.length - apartados.length}</dd></div>
       </dl>
+
+      <div className="mini-talonario" aria-label="Mapa de los 100 números">
+        {numeros.map((n) => (
+          <span
+            key={n.numero}
+            className={`mini ${n.vencido ? 'disponible' : n.estado}`}
+            title={n.nombre ? `${dosCifras(n.numero)}: ${n.nombre}` : dosCifras(n.numero)}
+          >
+            {dosCifras(n.numero)}
+          </span>
+        ))}
+      </div>
 
       {error && <p className="error" role="alert">{error}</p>}
 
       <section>
-        <h2>Por confirmar</h2>
+        <h2>Por confirmar <span className="conteo">{porConfirmar.length}</span></h2>
         {porConfirmar.length === 0 && <p className="vacio">Nadie está esperando confirmación.</p>}
         <ul className="personas">
           {porConfirmar.map((p) => {
             const vencido = p.numeros.every((n) => n.vencido)
             return (
-              <li key={p.telefono} className={vencido ? 'vencido' : ''}>
+              <li key={p.telefono} className={`persona apartado ${vencido ? 'vencido' : ''}`}>
                 <div className="persona-datos">
                   <strong>{p.nombre}</strong>
-                  <a href={`https://wa.me/57${p.telefono}`} target="_blank" rel="noreferrer">{p.telefono}</a>
-                  <span className="cifras">{p.numeros.map((n) => dosCifras(n.numero)).join('  ')}</span>
+                  <a href={`https://wa.me/57${p.telefono}`} target="_blank" rel="noreferrer">WhatsApp {p.telefono}</a>
+                  <span className="fichas">
+                    {p.numeros.map((n) => <span key={n.numero} className="ficha">{dosCifras(n.numero)}</span>)}
+                  </span>
                   <span className="meta">
                     {pesos(p.numeros.length * config.precio)}, apartó {haceCuanto(p.numeros[0].apartadoEn)}
                     {vencido && '. Ya venció: alguien más puede tomarlos'}
                   </span>
                 </div>
                 <div className="persona-acciones">
-                  <button className="btn" disabled={ocupado} onClick={() => accion('confirmar', p)}>
+                  <button className="btn btn-verde" disabled={ocupado} onClick={() => accion('confirmar', p)}>
                     Confirmar pago
                   </button>
                   <button className="btn-texto" disabled={ocupado} onClick={() => accion('liberar', p)}>
@@ -173,15 +212,17 @@ export default function Admin() {
       </section>
 
       <section>
-        <h2>Vendidos</h2>
+        <h2>Vendidos <span className="conteo">{compradores.length}</span></h2>
         {compradores.length === 0 && <p className="vacio">Todavía no hay pagos confirmados.</p>}
         <ul className="personas">
           {compradores.map((p) => (
-            <li key={p.telefono}>
+            <li key={p.telefono} className="persona pagado">
               <div className="persona-datos">
                 <strong>{p.nombre}</strong>
-                <a href={`https://wa.me/57${p.telefono}`} target="_blank" rel="noreferrer">{p.telefono}</a>
-                <span className="cifras">{p.numeros.map((n) => dosCifras(n.numero)).join('  ')}</span>
+                <a href={`https://wa.me/57${p.telefono}`} target="_blank" rel="noreferrer">WhatsApp {p.telefono}</a>
+                <span className="fichas">
+                  {p.numeros.map((n) => <span key={n.numero} className="ficha">{dosCifras(n.numero)}</span>)}
+                </span>
               </div>
               <div className="persona-acciones">
                 <button className="btn-texto" disabled={ocupado} onClick={() => accion('liberar', p)}>
