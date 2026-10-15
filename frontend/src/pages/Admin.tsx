@@ -65,6 +65,10 @@ export default function Admin() {
   // Ganador: lo que se escribe en el campo y qué ventana está abierta
   const [cifrasGanador, setCifrasGanador] = useState('')
   const [dialogoGanador, setDialogoGanador] = useState<'anunciar' | 'quitar' | null>(null)
+  // Descarga de respaldo esperando que se escriba la clave
+  const [descargaPendiente, setDescargaPendiente] = useState<'numeros' | 'historial' | null>(null)
+  const [claveDescarga, setClaveDescarga] = useState('')
+  const [errorDescarga, setErrorDescarga] = useState<string | null>(null)
   // Mensaje corto que aparece abajo después de cada acción
   const [aviso, setAviso] = useState<string | null>(null)
 
@@ -147,12 +151,23 @@ export default function Admin() {
     }
   }
 
-  async function descargar(tipo: 'numeros' | 'historial') {
+  // Los respaldos traen todos los celulares: antes de descargar se vuelve a pedir la clave
+  function pedirClaveDescarga(tipo: 'numeros' | 'historial') {
+    setClaveDescarga('')
+    setErrorDescarga(null)
+    setDescargaPendiente(tipo)
+  }
+
+  async function descargar() {
+    if (!descargaPendiente || !claveDescarga) return
     try {
-      await descargarRespaldo(clave, tipo)
-      setAviso(tipo === 'numeros' ? 'Respaldo de números descargado' : 'Historial descargado')
+      await descargarRespaldo(claveDescarga, descargaPendiente)
+      setAviso(descargaPendiente === 'numeros' ? 'Respaldo de números descargado' : 'Historial descargado')
+      setDescargaPendiente(null)
     } catch (e) {
-      setError((e as Error).message)
+      setErrorDescarga((e as Error).message)
+    } finally {
+      setClaveDescarga('')
     }
   }
 
@@ -354,10 +369,10 @@ export default function Admin() {
           Descarga una copia para tenerla en tu celular o computador. Se abre en Excel. Hazlo cada noche.
         </p>
         <div className="respaldo-botones">
-          <button type="button" className="btn btn-verde" onClick={() => descargar('numeros')}>
+          <button type="button" className="btn btn-verde" onClick={() => pedirClaveDescarga('numeros')}>
             Descargar números
           </button>
-          <button type="button" className="btn btn-claro" onClick={() => descargar('historial')}>
+          <button type="button" className="btn btn-claro" onClick={() => pedirClaveDescarga('historial')}>
             Descargar historial
           </button>
         </div>
@@ -430,6 +445,31 @@ export default function Admin() {
         onCancelar={() => setDialogoGanador(null)}
       >
         <p>Úsalo solo si te equivocaste al escribirlo. La rifa vuelve a quedar abierta y la gente podrá apartar números otra vez.</p>
+      </ConfirmarDialogo>
+
+      <ConfirmarDialogo
+        abierto={descargaPendiente !== null}
+        titulo="Escribe la clave para descargar"
+        textoConfirmar="Descargar"
+        onConfirmar={descargar}
+        onCancelar={() => setDescargaPendiente(null)}
+      >
+        <p>
+          El archivo trae los nombres y celulares de todos los compradores. Escribe la clave de administrador
+          para confirmar que eres tú.
+        </p>
+        <label>
+          Clave de administrador
+          <input
+            type="password"
+            value={claveDescarga}
+            onChange={(e) => setClaveDescarga(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') descargar() }}
+            autoComplete="current-password"
+            autoFocus
+          />
+        </label>
+        {errorDescarga && <p className="dialogo-alerta" role="alert">{errorDescarga}</p>}
       </ConfirmarDialogo>
 
       {aviso && <p className="aviso" role="status">{aviso}</p>}

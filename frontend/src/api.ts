@@ -91,9 +91,11 @@ export interface Movimiento {
 export const getHistorial = (clave: string) =>
   pedir<Movimiento[]>('/api/admin/historial', { headers: adminHeaders(clave) })
 
-// Descarga el CSV (va con la clave en el header, por eso no basta un link normal)
+// Descarga el CSV. Se le pasa la clave que la persona escribe en ese momento
+// (va en el header, por eso no basta un link normal)
 export async function descargarRespaldo(clave: string, tipo: 'numeros' | 'historial') {
   const res = await fetch(`/api/admin/respaldo/${tipo}`, { headers: adminHeaders(clave) })
+  if (res.status === 401) throw new Error('Clave incorrecta')
   if (!res.ok) throw new Error('No se pudo descargar el respaldo')
   const url = URL.createObjectURL(await res.blob())
   const hoy = new Date().toISOString().slice(0, 10)

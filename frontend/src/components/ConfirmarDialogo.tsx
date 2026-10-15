@@ -26,7 +26,11 @@ export default function ConfirmarDialogo({
   useEffect(() => {
     const dialogo = ref.current
     if (!dialogo) return
-    if (abierto && !dialogo.open) dialogo.showModal()
+    if (abierto && !dialogo.open) {
+      dialogo.showModal()
+      // Si la ventana tiene un campo para escribir, el cursor queda ahí
+      dialogo.querySelector<HTMLInputElement>('input')?.focus()
+    }
     if (!abierto && dialogo.open) dialogo.close()
   }, [abierto])
 

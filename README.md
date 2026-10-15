@@ -34,7 +34,7 @@ Se entra con la clave `ADMIN_KEY`. Desde ahí se maneja toda la rifa:
 - **Contadores y mapa:** vendidos, por confirmar y libres, más un mapa de los 100 números por colores.
 - **Por confirmar:** cada comprador con sus números, su WhatsApp y hace cuánto apartó. Botones **Confirmar pago** y **Liberar**.
 - **Vendidos:** quién compró qué, con opción de liberar si hubo un error.
-- **Respaldo:** descarga en CSV (se abre en Excel) del estado de los 100 números y del historial completo.
+- **Respaldo:** descarga en CSV (se abre en Excel) del estado de los 100 números y del historial completo. Como trae todos los celulares, vuelve a pedir la `ADMIN_KEY` antes de cada descarga.
 - **Historial de movimientos:** cada apartado, pago confirmado, liberación y cambio de ganador, con nombre, celular y hora.
 - Liberar y cambiar el ganador piden confirmación; cada acción muestra un aviso corto al terminar.
 
