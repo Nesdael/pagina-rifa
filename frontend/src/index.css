@@ -499,7 +499,61 @@ body.noche .pagina > .error { color: var(--amarillo); }
 .persona-acciones { display: flex; align-items: center; gap: 4px; }
 .persona .btn-texto { color: var(--tinta); }
 
+/* ---------- Ventana de confirmación ---------- */
+.dialogo {
+  border: none;
+  padding: 0;
+  background: transparent;
+  max-width: min(420px, calc(100vw - 32px));
+  width: 100%;
+}
+.dialogo::backdrop { background: rgba(14, 18, 52, 0.7); }
+.dialogo[open] { animation: aparecer 0.18s ease-out; }
+.dialogo-tarjeta {
+  background: var(--hoja);
+  color: var(--tinta);
+  border-radius: 16px;
+  border-top: 8px solid var(--fucsia);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dialogo-tarjeta h2 { font-family: var(--display); font-weight: 400; font-size: 1.6rem; line-height: 1.1; margin: 0; }
+.dialogo-texto { display: flex; flex-direction: column; gap: 10px; color: var(--tinta-suave); }
+.dialogo-texto strong { color: var(--tinta); }
+.dialogo-alerta { color: var(--fucsia); font-weight: 700; }
+.dialogo-acciones { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 4px; }
+.dialogo .btn-texto { color: var(--tinta); }
+.btn-peligro { background: var(--fucsia); }
+
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Aviso que aparece abajo después de confirmar o liberar */
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  background: var(--verde);
+  color: var(--hoja);
+  font-weight: 700;
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: 0 0 0 3px var(--amarillo);
+  animation: aviso-entra 0.2s ease-out;
+}
+@keyframes aviso-entra {
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .barra-seleccion, .casilla.elegido { animation: none; }
+  .barra-seleccion, .casilla.elegido, .dialogo[open], .aviso { animation: none; }
   .progreso span { transition: none; }
 }

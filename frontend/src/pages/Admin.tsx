@@ -9,6 +9,7 @@ import {
   type ConfigRifa,
   type NumeroAdmin,
 } from '../api'
+import ConfirmarDialogo from '../components/ConfirmarDialogo'
 
 const CLAVE_STORAGE = 'rifa-admin-clave'
 
@@ -53,6 +54,16 @@ export default function Admin() {
   const [config, setConfig] = useState<ConfigRifa | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  // Persona que se va a liberar (abre la ventana de confirmación)
+  const [porLiberar, setPorLiberar] = useState<Persona | null>(null)
+  // Mensaje corto que aparece abajo después de cada acción
+  const [aviso, setAviso] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!aviso) return
+    const id = setTimeout(() => setAviso(null), 3500)
+    return () => clearTimeout(id)
+  }, [aviso])
 
   const cargar = useCallback(async (c: string) => {
     try {
@@ -90,18 +101,23 @@ export default function Admin() {
   // Aplica la acción a todos los números de la persona
   async function accion(tipo: 'confirmar' | 'liberar', persona: Persona) {
     const lista = persona.numeros.map((n) => dosCifras(n.numero)).join(', ')
-    if (tipo === 'liberar' && !window.confirm(`¿Liberar ${lista} de ${persona.nombre}?`)) return
     setOcupado(true)
     try {
       for (const n of persona.numeros) {
         await (tipo === 'confirmar' ? confirmarPago(clave, n.numero) : liberar(clave, n.numero))
       }
+      setAviso(tipo === 'confirmar' ? `Pago confirmado: ${lista} de ${persona.nombre}` : `Liberados: ${lista}`)
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setOcupado(false)
       cargar(clave)
     }
+  }
+
+  function confirmarLiberar() {
+    if (porLiberar) accion('liberar', porLiberar)
+    setPorLiberar(null)
   }
 
   if (!clave) {
@@ -201,7 +217,7 @@ export default function Admin() {
                   <button className="btn btn-verde" disabled={ocupado} onClick={() => accion('confirmar', p)}>
                     Confirmar pago
                   </button>
-                  <button className="btn-texto" disabled={ocupado} onClick={() => accion('liberar', p)}>
+                  <button className="btn-texto" disabled={ocupado} onClick={() => setPorLiberar(p)}>
                     Liberar
                   </button>
                 </div>
@@ -225,7 +241,7 @@ export default function Admin() {
                 </span>
               </div>
               <div className="persona-acciones">
-                <button className="btn-texto" disabled={ocupado} onClick={() => accion('liberar', p)}>
+                <button className="btn-texto" disabled={ocupado} onClick={() => setPorLiberar(p)}>
                   Liberar
                 </button>
               </div>
@@ -233,6 +249,31 @@ export default function Admin() {
           ))}
         </ul>
       </section>
+
+      <ConfirmarDialogo
+        abierto={porLiberar !== null}
+        titulo="¿Liberar estos números?"
+        textoConfirmar="Sí, liberar"
+        peligro
+        onConfirmar={confirmarLiberar}
+        onCancelar={() => setPorLiberar(null)}
+      >
+        {porLiberar && (
+          <>
+            <span className="fichas">
+              {porLiberar.numeros.map((n) => <span key={n.numero} className="ficha">{dosCifras(n.numero)}</span>)}
+            </span>
+            <p>
+              Son de <strong>{porLiberar.nombre}</strong>. Quedarán libres para que otra persona los aparte.
+            </p>
+            {porLiberar.numeros.some((n) => n.estado === 'pagado') && (
+              <p className="dialogo-alerta">Ojo: esta persona ya pagó.</p>
+            )}
+          </>
+        )}
+      </ConfirmarDialogo>
+
+      {aviso && <p className="aviso" role="status">{aviso}</p>}
     </main>
   )
 }
