@@ -1,0 +1,339 @@
+/* ---------- Colores y fuentes ---------- */
+:root {
+  --papel: #e9eef8;       /* fondo de la página, papel azulado */
+  --hoja: #ffffff;        /* la hoja del talonario */
+  --tinta: #1b3a8c;       /* azul de bolígrafo */
+  --tinta-suave: #52618a;
+  --linea: #c3cde4;
+  --sello: #b8232b;       /* sello de "vendido" */
+  --resaltador: #ffe066;  /* apartado */
+  --whatsapp: #1a7f45;
+
+  --display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --texto: 'Figtree', system-ui, sans-serif;
+  --mano: 'Caveat', cursive;
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--texto);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, p { margin: 0; }
+
+button, input { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--tinta);
+  outline-offset: 2px;
+}
+
+.pagina {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 28px 16px 120px;
+}
+
+.cargando, .vacio { color: var(--tinta-suave); padding: 24px 0; }
+
+/* ---------- Encabezado ---------- */
+.encabezado { margin-bottom: 24px; }
+
+.encabezado h1 { display: flex; flex-direction: column; font-weight: 400; }
+
+.titulo-chico {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.premio {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(3.5rem, 19vw, 7.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+}
+
+.detalle {
+  margin-top: 12px;
+  max-width: 34em;
+  color: var(--tinta-suave);
+}
+.detalle strong { color: var(--tinta); }
+
+.instrucciones { margin-bottom: 12px; }
+
+/* ---------- El talonario ---------- */
+.talonario {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  padding: 10px 10px 10px 22px;
+  position: relative;
+  /* Perforación del talonario en el borde izquierdo */
+  background-image: radial-gradient(circle at 8px 50%, var(--papel) 3.5px, transparent 4px);
+  background-size: 16px 14px;
+  background-repeat: repeat-y;
+}
+
+.casilla {
+  aspect-ratio: 1;
+  border: none;
+  border-right: 1px dashed var(--linea);
+  border-bottom: 1px dashed var(--linea);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  display: grid;
+  place-items: center;
+  touch-action: manipulation;
+}
+.casilla:nth-child(10n) { border-right: none; }
+.casilla:nth-last-child(-n + 10) { border-bottom: none; }
+
+.cifra {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(1.05rem, 4.6vw, 1.6rem);
+  line-height: 1;
+}
+
+.casilla.disponible:hover .cifra { text-decoration: underline; text-underline-offset: 3px; }
+
+.casilla.elegido {
+  background: var(--tinta);
+  color: var(--hoja);
+  border-radius: 4px;
+}
+
+/* Apartado: subrayado con resaltador */
+.casilla.apartado { cursor: not-allowed; }
+.casilla.apartado .cifra {
+  background: linear-gradient(transparent 30%, var(--resaltador) 30%, var(--resaltador) 85%, transparent 85%);
+  padding: 0 3px;
+  opacity: 0.85;
+}
+
+/* Vendido: sello rojo torcido */
+.casilla.pagado { cursor: not-allowed; color: var(--sello); }
+.casilla.pagado .cifra {
+  border: 2px solid var(--sello);
+  border-radius: 4px;
+  padding: 2px 3px 1px;
+  transform: rotate(-9deg);
+  opacity: 0.9;
+}
+.firma { display: none; }
+
+.casilla:disabled { cursor: default; }
+
+.casilla.ganador {
+  background: var(--sello);
+  color: var(--hoja);
+  border-radius: 4px;
+}
+.casilla.ganador .cifra { border-color: var(--hoja); }
+
+/* En pantallas más anchas cabe el nombre escrito a mano */
+@media (min-width: 520px) {
+  .casilla.pagado { align-content: center; gap: 2px; }
+  .firma {
+    display: block;
+    font-family: var(--mano);
+    font-size: 0.8rem;
+    line-height: 1;
+    color: var(--tinta);
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+/* ---------- Leyenda ---------- */
+.leyenda {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 0.875rem;
+  color: var(--tinta-suave);
+}
+.leyenda li { display: flex; align-items: center; gap: 6px; }
+.muestra {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--linea);
+  background: var(--hoja);
+}
+.muestra.apartado { background: var(--resaltador); border-color: #e6c440; }
+.muestra.pagado { border: 2px solid var(--sello); transform: rotate(-9deg); }
+
+/* ---------- Barra inferior con la selección ---------- */
+.barra-seleccion {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: var(--tinta);
+  color: var(--hoja);
+  padding: 12px max(16px, calc((100vw - 560px) / 2 + 16px));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: subir 0.2s ease-out;
+}
+.barra-seleccion p { font-size: 1.05rem; }
+.barra-seleccion span { opacity: 0.8; margin-left: 6px; }
+.barra-seleccion .btn { background: var(--hoja); color: var(--tinta); }
+
+@keyframes subir {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* ---------- Botones ---------- */
+.btn {
+  background: var(--tinta);
+  color: var(--hoja);
+  border: none;
+  border-radius: 6px;
+  padding: 12px 22px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+.btn:disabled { opacity: 0.6; cursor: wait; }
+
+.btn-whatsapp { background: var(--whatsapp); width: 100%; font-size: 1.1rem; }
+
+.btn-texto {
+  background: none;
+  border: none;
+  padding: 12px 8px;
+  color: var(--tinta);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---------- Formularios ---------- */
+.hoja-form {
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hoja-form h1, .hoja-form h2 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 2rem;
+  line-height: 1;
+}
+.resumen { color: var(--tinta-suave); }
+.resumen strong { color: var(--tinta); }
+
+label { display: flex; flex-direction: column; gap: 6px; font-weight: 500; }
+
+input {
+  border: none;
+  border-bottom: 2px solid var(--linea);
+  padding: 8px 2px;
+  font-size: 1.15rem;
+  background: transparent;
+  border-radius: 0;
+}
+input:focus { outline: none; border-bottom-color: var(--tinta); }
+
+.acciones { display: flex; justify-content: space-between; align-items: center; }
+
+.error { color: var(--sello); font-weight: 500; }
+
+.listo p { color: var(--tinta-suave); }
+
+/* ---------- Ganador ---------- */
+.aviso-ganador {
+  background: var(--sello);
+  color: var(--hoja);
+  border-radius: 6px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.cifra-ganadora {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 5rem;
+  line-height: 1;
+}
+
+/* ---------- Admin ---------- */
+.admin-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.admin h1 { font-family: var(--display); font-weight: 800; font-size: 2rem; }
+.admin h2 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  margin: 28px 0 10px;
+}
+
+.cuentas {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--linea);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0;
+}
+.cuentas div { background: var(--hoja); padding: 10px 12px; }
+.cuentas dt { font-size: 0.8rem; color: var(--tinta-suave); }
+.cuentas dd { margin: 0; font-family: var(--display); font-weight: 800; font-size: 1.6rem; }
+@media (max-width: 420px) {
+  .cuentas { grid-template-columns: repeat(2, 1fr); }
+}
+
+.personas { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.personas li {
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.personas li.vencido { border-style: dashed; opacity: 0.75; }
+.persona-datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.persona-datos a { color: var(--tinta-suave); font-size: 0.9rem; }
+.persona-datos .cifras { font-family: var(--display); font-weight: 800; font-size: 1.3rem; white-space: pre-wrap; }
+.persona-datos .meta { font-size: 0.85rem; color: var(--tinta-suave); }
+.persona-acciones { display: flex; align-items: center; gap: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .barra-seleccion { animation: none; }
+}
