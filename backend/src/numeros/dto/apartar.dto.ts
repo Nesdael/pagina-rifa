@@ -14,7 +14,7 @@ import {
 export class ApartarDto {
   @IsArray()
   @ArrayMinSize(1, { message: 'Elige al menos un número' })
-  @ArrayMaxSize(20, { message: 'Máximo 20 números por persona' })
+  @ArrayMaxSize(10, { message: 'Máximo 10 números por vez' })
   @ArrayUnique()
   @IsInt({ each: true })
   @Min(0, { each: true, message: 'Los números van del 00 al 99' })

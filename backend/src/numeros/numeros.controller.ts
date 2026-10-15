@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import { AdminGuard } from './admin.guard';
 import { ApartarDto } from './dto/apartar.dto';
@@ -33,6 +34,9 @@ export class NumerosController {
     return this.numerosService.listarPublico();
   }
 
+  // Máximo 5 intentos de apartar por minuto desde la misma IP
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('apartar')
   apartar(@Body() dto: ApartarDto) {
     return this.numerosService.apartar(dto);
@@ -68,5 +72,28 @@ export class NumerosController {
   @Delete('admin/ganador')
   quitarGanador() {
     return this.numerosService.quitarGanador();
+  }
+
+  @UseGuards(AdminGuard)
+  @Get('admin/historial')
+  historial() {
+    return this.numerosService.listarHistorial();
+  }
+
+  // Respaldos en CSV para abrir en Excel
+  @UseGuards(AdminGuard)
+  @Get('admin/respaldo/numeros')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="rifa-numeros.csv"')
+  respaldoNumeros() {
+    return this.numerosService.respaldoNumeros();
+  }
+
+  @UseGuards(AdminGuard)
+  @Get('admin/respaldo/historial')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="rifa-historial.csv"')
+  respaldoHistorial() {
+    return this.numerosService.respaldoHistorial();
   }
 }
