@@ -24,6 +24,7 @@ export interface ConfigRifa {
   loteria: string
   fechaSorteo: string
   whatsapp: string
+  indicativo: string
   minutosApartado: number
   ganador: number | null
 }

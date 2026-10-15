@@ -21,6 +21,8 @@ export class NumerosController {
       loteria: this.config.get<string>('LOTERIA'),
       fechaSorteo: this.config.get<string>('FECHA_SORTEO'),
       whatsapp: this.config.get<string>('WHATSAPP'),
+      // Indicativo del país para los links de WhatsApp del admin (57 = Colombia)
+      indicativo: this.config.get<string>('INDICATIVO') ?? '57',
       minutosApartado: Number(this.config.get('MINUTOS_APARTADO')),
       ganador: await this.numerosService.getGanador(),
     };

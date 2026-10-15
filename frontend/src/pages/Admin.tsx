@@ -151,7 +151,7 @@ export default function Admin() {
     return (
       <main className="pagina admin">
         <form className="hoja-form login" onSubmit={entrar}>
-          <img src="/sinuano-noche.png" alt="" className="logo-chico" width="600" height="335" />
+          <img src="/logo-loteria.png" alt="" className="logo-chico" width="600" height="335" />
           <h1>Panel de la rifa</h1>
           <label>
             Clave de administrador
@@ -226,7 +226,7 @@ export default function Admin() {
                 {ganadorPago && datosGanador ? (
                   <>
                     <strong>{datosGanador.nombre}</strong>
-                    <a href={`https://wa.me/57${datosGanador.telefono}`} target="_blank" rel="noreferrer">
+                    <a href={`https://wa.me/${config.indicativo}${datosGanador.telefono}`} target="_blank" rel="noreferrer">
                       WhatsApp {datosGanador.telefono}
                     </a>
                   </>
@@ -287,7 +287,7 @@ export default function Admin() {
               <li key={p.telefono} className={`persona apartado ${vencido ? 'vencido' : ''}`}>
                 <div className="persona-datos">
                   <strong>{p.nombre}</strong>
-                  <a href={`https://wa.me/57${p.telefono}`} target="_blank" rel="noreferrer">WhatsApp {p.telefono}</a>
+                  <a href={`https://wa.me/${config.indicativo}${p.telefono}`} target="_blank" rel="noreferrer">WhatsApp {p.telefono}</a>
                   <span className="fichas">
                     {p.numeros.map((n) => <span key={n.numero} className="ficha">{dosCifras(n.numero)}</span>)}
                   </span>
@@ -318,7 +318,7 @@ export default function Admin() {
             <li key={p.telefono} className="persona pagado">
               <div className="persona-datos">
                 <strong>{p.nombre}</strong>
-                <a href={`https://wa.me/57${p.telefono}`} target="_blank" rel="noreferrer">WhatsApp {p.telefono}</a>
+                <a href={`https://wa.me/${config.indicativo}${p.telefono}`} target="_blank" rel="noreferrer">WhatsApp {p.telefono}</a>
                 <span className="fichas">
                   {p.numeros.map((n) => <span key={n.numero} className="ficha">{dosCifras(n.numero)}</span>)}
                 </span>
