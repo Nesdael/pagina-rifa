@@ -79,6 +79,31 @@ export const anunciarGanador = (clave: string, numero: number) =>
 export const quitarGanador = (clave: string) =>
   pedir<unknown>('/api/admin/ganador', { method: 'DELETE', headers: adminHeaders(clave) })
 
+export interface Movimiento {
+  id: number
+  accion: string
+  numero: number | null
+  nombre: string | null
+  telefono: string | null
+  fecha: string
+}
+
+export const getHistorial = (clave: string) =>
+  pedir<Movimiento[]>('/api/admin/historial', { headers: adminHeaders(clave) })
+
+// Descarga el CSV (va con la clave en el header, por eso no basta un link normal)
+export async function descargarRespaldo(clave: string, tipo: 'numeros' | 'historial') {
+  const res = await fetch(`/api/admin/respaldo/${tipo}`, { headers: adminHeaders(clave) })
+  if (!res.ok) throw new Error('No se pudo descargar el respaldo')
+  const url = URL.createObjectURL(await res.blob())
+  const hoy = new Date().toISOString().slice(0, 10)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `rifa-${tipo}-${hoy}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ---- Utilidades de formato ----
 export const dosCifras = (n: number) => String(n).padStart(2, '0')
 

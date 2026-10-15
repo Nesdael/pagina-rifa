@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
   anunciarGanador,
   confirmarPago,
+  descargarRespaldo,
+  getHistorial,
   dosCifras,
   getConfig,
   getNumerosAdmin,
@@ -9,6 +11,7 @@ import {
   pesos,
   quitarGanador,
   type ConfigRifa,
+  type Movimiento,
   type NumeroAdmin,
 } from '../api'
 import ConfirmarDialogo from '../components/ConfirmarDialogo'
@@ -53,6 +56,7 @@ export default function Admin() {
   const [clave, setClave] = useState(leerClave)
   const [entrada, setEntrada] = useState('')
   const [numeros, setNumeros] = useState<NumeroAdmin[] | null>(null)
+  const [historial, setHistorial] = useState<Movimiento[]>([])
   const [config, setConfig] = useState<ConfigRifa | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
@@ -72,8 +76,9 @@ export default function Admin() {
 
   const cargar = useCallback(async (c: string) => {
     try {
-      const [lista, conf] = await Promise.all([getNumerosAdmin(c), getConfig()])
+      const [lista, conf, movs] = await Promise.all([getNumerosAdmin(c), getConfig(), getHistorial(c)])
       setNumeros(lista)
+      setHistorial(movs)
       setConfig(conf)
       setError(null)
     } catch (e) {
@@ -139,6 +144,15 @@ export default function Admin() {
     } finally {
       setOcupado(false)
       cargar(clave)
+    }
+  }
+
+  async function descargar(tipo: 'numeros' | 'historial') {
+    try {
+      await descargarRespaldo(clave, tipo)
+      setAviso(tipo === 'numeros' ? 'Respaldo de números descargado' : 'Historial descargado')
+    } catch (e) {
+      setError((e as Error).message)
     }
   }
 
@@ -331,6 +345,37 @@ export default function Admin() {
             </li>
           ))}
         </ul>
+      </section>
+
+
+      <section className="respaldo">
+        <h2>Respaldo</h2>
+        <p className="caja-nota">
+          Descarga una copia para tenerla en tu celular o computador. Se abre en Excel. Hazlo cada noche.
+        </p>
+        <div className="respaldo-botones">
+          <button type="button" className="btn btn-verde" onClick={() => descargar('numeros')}>
+            Descargar números
+          </button>
+          <button type="button" className="btn btn-claro" onClick={() => descargar('historial')}>
+            Descargar historial
+          </button>
+        </div>
+
+        <details className="historial">
+          <summary>Historial de movimientos <span className="conteo">{historial.length}</span></summary>
+          {historial.length === 0 && <p className="vacio">Todavía no hay movimientos.</p>}
+          <ol>
+            {historial.map((m) => (
+              <li key={m.id} className={`mov mov-${m.accion.replace(/\s+/g, '-')}`}>
+                <span className="mov-accion">{m.accion}</span>
+                {m.numero !== null && <span className="ficha">{dosCifras(m.numero)}</span>}
+                <span className="mov-quien">{m.nombre}{m.telefono && <small>{m.telefono}</small>}</span>
+                <time className="mov-fecha">{haceCuanto(m.fecha)}</time>
+              </li>
+            ))}
+          </ol>
+        </details>
       </section>
 
       <ConfirmarDialogo

@@ -547,6 +547,37 @@ body.noche .pagina > .error { color: var(--amarillo); }
 .persona-acciones { display: flex; align-items: center; gap: 4px; }
 .persona .btn-texto { color: var(--tinta); }
 
+/* Respaldo e historial */
+.respaldo .caja-nota { opacity: 0.85; }
+.respaldo-botones { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 16px; }
+.btn-claro { background: rgba(255, 255, 255, 0.15); }
+.historial {
+  background: var(--hoja);
+  color: var(--tinta);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.historial summary { cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.historial .conteo { background: var(--gris-claro); color: var(--tinta); }
+.historial ol { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; }
+.mov {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--linea);
+  font-size: 0.9rem;
+}
+.mov-accion { font-weight: 700; }
+.mov .ficha { font-size: 0.95rem; padding: 3px 5px 2px; }
+.mov-quien { color: var(--tinta); min-width: 0; display: flex; flex-direction: column; line-height: 1.25; overflow-wrap: anywhere; }
+.mov-quien small { color: var(--tinta-suave); font-size: 0.8rem; }
+.mov-fecha { color: var(--tinta-suave); font-size: 0.8rem; }
+.mov-pago-confirmado .mov-accion { color: var(--verde); }
+.mov-liberado .mov-accion, .mov-ganador-quitado .mov-accion { color: var(--fucsia); }
+.mov-pago-confirmado .ficha { background: var(--fucsia); color: var(--hoja); }
+
 /* ---------- Ventana de confirmación ---------- */
 .dialogo {
   border: none;
