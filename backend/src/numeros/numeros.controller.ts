@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AdminGuard } from './admin.guard';
 import { ApartarDto } from './dto/apartar.dto';
+import { GanadorDto } from './dto/ganador.dto';
 import { NumerosService } from './numeros.service';
 
 @Controller()
@@ -13,7 +14,7 @@ export class NumerosController {
 
   // Datos de la rifa que el frontend necesita mostrar
   @Get('config')
-  getConfig() {
+  async getConfig() {
     return {
       precio: Number(this.config.get('PRECIO')),
       premio: Number(this.config.get('PREMIO')),
@@ -21,7 +22,7 @@ export class NumerosController {
       fechaSorteo: this.config.get<string>('FECHA_SORTEO'),
       whatsapp: this.config.get<string>('WHATSAPP'),
       minutosApartado: Number(this.config.get('MINUTOS_APARTADO')),
-      ganador: this.config.get<string>('GANADOR') || null,
+      ganador: await this.numerosService.getGanador(),
     };
   }
 
@@ -53,5 +54,17 @@ export class NumerosController {
   @Post('admin/liberar/:numero')
   liberar(@Param('numero', ParseIntPipe) numero: number) {
     return this.numerosService.liberar(numero);
+  }
+
+  @UseGuards(AdminGuard)
+  @Post('admin/ganador')
+  anunciarGanador(@Body() dto: GanadorDto) {
+    return this.numerosService.anunciarGanador(dto.numero);
+  }
+
+  @UseGuards(AdminGuard)
+  @Delete('admin/ganador')
+  quitarGanador() {
+    return this.numerosService.quitarGanador();
   }
 }

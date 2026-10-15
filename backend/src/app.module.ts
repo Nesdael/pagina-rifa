@@ -4,6 +4,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { Numero } from './numeros/numero.entity';
+import { Sorteo } from './numeros/sorteo.entity';
 import { NumerosModule } from './numeros/numeros.module';
 
 @Module({
@@ -15,7 +16,7 @@ import { NumerosModule } from './numeros/numeros.module';
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
         url: config.get<string>('DATABASE_URL'),
-        entities: [Numero],
+        entities: [Numero, Sorteo],
         // Crea/actualiza la tabla solo. Para una tabla tan simple no hacen falta migrations.
         synchronize: true,
       }),

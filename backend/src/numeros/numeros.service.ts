@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { ApartarDto } from './dto/apartar.dto';
 import { EstadoNumero, Numero } from './numero.entity';
+import { Sorteo } from './sorteo.entity';
 
 // Lo que ve cualquier persona: sin teléfono y con el nombre recortado
 export interface NumeroPublico {
@@ -26,17 +27,39 @@ export interface NumeroAdmin extends Numero {
 export class NumerosService implements OnModuleInit {
   constructor(
     @InjectRepository(Numero) private readonly repo: Repository<Numero>,
+    @InjectRepository(Sorteo) private readonly sorteoRepo: Repository<Sorteo>,
     private readonly dataSource: DataSource,
     private readonly config: ConfigService,
   ) {}
 
   // Al arrancar: si la tabla está vacía, crea los números del 00 al 99
+  // y la fila del sorteo (sin ganador)
   async onModuleInit(): Promise<void> {
     const total = await this.repo.count();
     if (total === 0) {
       const numeros = Array.from({ length: 100 }, (_, i) => this.repo.create({ numero: i }));
       await this.repo.save(numeros);
     }
+    const sorteo = await this.sorteoRepo.findOneBy({ id: 1 });
+    if (!sorteo) {
+      await this.sorteoRepo.save({ id: 1, ganador: null, anunciadoEn: null });
+    }
+  }
+
+  // ---- Ganador del sorteo ----
+
+  async getGanador(): Promise<number | null> {
+    const sorteo = await this.sorteoRepo.findOneBy({ id: 1 });
+    return sorteo?.ganador ?? null;
+  }
+
+  async anunciarGanador(numero: number): Promise<Sorteo> {
+    return this.sorteoRepo.save({ id: 1, ganador: numero, anunciadoEn: new Date() });
+  }
+
+  // Por si se equivocaron al escribirlo
+  async quitarGanador(): Promise<Sorteo> {
+    return this.sorteoRepo.save({ id: 1, ganador: null, anunciadoEn: null });
   }
 
   // Fecha antes de la cual un apartado ya se venció
@@ -76,6 +99,9 @@ export class NumerosService implements OnModuleInit {
   // El UPDATE solo afecta la fila si sigue libre, así dos personas no pueden
   // quedarse con el mismo número aunque le den clic al mismo tiempo.
   async apartar(dto: ApartarDto): Promise<number[]> {
+    if ((await this.getGanador()) !== null) {
+      throw new BadRequestException('La rifa ya terminó, ya hay un número ganador');
+    }
     const limite = this.limiteApartado();
 
     await this.dataSource.transaction(async (manager) => {
