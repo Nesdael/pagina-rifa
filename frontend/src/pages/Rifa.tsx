@@ -7,6 +7,19 @@ type Paso = 'eligiendo' | 'formulario' | 'listo'
 
 const REFRESCO_MS = 10_000
 
+// 10080 -> "7 días", 120 -> "2 horas", 90 -> "90 minutos"
+function textoDuracion(minutos: number): string {
+  if (minutos >= 1440 && minutos % 1440 === 0) {
+    const dias = minutos / 1440
+    return dias === 1 ? '1 día' : `${dias} días`
+  }
+  if (minutos >= 60 && minutos % 60 === 0) {
+    const horas = minutos / 60
+    return horas === 1 ? '1 hora' : `${horas} horas`
+  }
+  return `${minutos} minutos`
+}
+
 // "Faltan 15 días para el sorteo"
 function textoFaltan(fechaSorteo: string): string {
   const hoy = new Date()
@@ -124,8 +137,7 @@ export default function Rifa() {
 
   const ganador = config.ganador
   const quedan = numeros.filter((n) => n.estado === 'disponible').length
-  const horas = config.minutosApartado / 60
-  const tiempoApartado = horas >= 1 ? `${horas} ${horas === 1 ? 'hora' : 'horas'}` : `${config.minutosApartado} minutos`
+  const tiempoApartado = textoDuracion(config.minutosApartado)
   const datosGanador = ganador !== null ? numeros.find((n) => n.numero === ganador) : undefined
 
   return (

@@ -86,7 +86,7 @@ Van en `backend/.env` en local y en la configuración del hosting en producción
 | `FECHA_SORTEO` | `2026-10-30` | Fecha del sorteo (para la cuenta regresiva) |
 | `WHATSAPP` | `573001234567` | WhatsApp del organizador, con indicativo, sin `+` ni espacios |
 | `INDICATIVO` | `57` | Indicativo del país de los compradores, para los links de WhatsApp del admin. Si no se pone, usa `57` |
-| `MINUTOS_APARTADO` | `120` | Cuánto dura un apartado sin pagar |
+| `MINUTOS_APARTADO` | `10080` | Cuánto dura un apartado sin pagar. `120` = 2 horas, `1440` = 1 día, `10080` = 1 semana (la página lo muestra en días u horas) |
 | `ZONA_HORARIA` | `America/Bogota` | Zona horaria de las fechas en los CSV. Si no se pone, usa Bogotá |
 | `PORT` | `3000` | Solo en local. Render lo asigna solo |
 
