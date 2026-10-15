@@ -34,6 +34,8 @@ Se entra con la clave `ADMIN_KEY`. Desde ahí se maneja toda la rifa:
 - **Contadores y mapa:** vendidos, por confirmar y libres, más un mapa de los 100 números por colores.
 - **Por confirmar:** cada comprador con sus números, su WhatsApp y hace cuánto apartó. Botones **Confirmar pago** y **Liberar**.
 - **Vendidos:** quién compró qué, con opción de liberar si hubo un error.
+- **Respaldo:** descarga en CSV (se abre en Excel) del estado de los 100 números y del historial completo.
+- **Historial de movimientos:** cada apartado, pago confirmado, liberación y cambio de ganador, con nombre, celular y hora.
 - Liberar y cambiar el ganador piden confirmación; cada acción muestra un aviso corto al terminar.
 
 ## Detalles técnicos que vale la pena mirar
@@ -42,6 +44,8 @@ Se entra con la clave `ADMIN_KEY`. Desde ahí se maneja toda la rifa:
 - **El comprador se entera si le ganan un número.** La página se actualiza cada 10 segundos y vuelve a revisar justo antes de mostrar el total. Si otra persona apartó uno de los números elegidos, lo quita de la selección y lo avisa, así el total y el mensaje de WhatsApp siempre coinciden con lo que de verdad se apartó.
 - **Los apartados vencidos se liberan sin cron.** Al consultar, un apartado con más de `MINUTOS_APARTADO` se trata como disponible.
 - **La rifa se cierra en el servidor.** Con un ganador anunciado, `/api/apartar` rechaza cualquier apartado, aunque alguien tenga la página vieja abierta.
+- **Nada se pierde al liberar.** Cada acción queda en la tabla `movimientos`, que solo crece y nunca se borra. Si alguien libera por error a un comprador que ya pagó, el historial dice quién era y su celular. Se guarda en la misma transacción que el cambio, así no puede quedar uno sin el otro.
+- **Nadie puede bloquear la rifa.** Un mismo celular puede tener máximo 10 números apartados sin pagar, y `/api/apartar` acepta máximo 5 intentos por minuto por IP (`@nestjs/throttler`). Como Render está detrás de un proxy, la app usa `trust proxy` para leer la IP real de cada persona.
 - **Privacidad:** la API pública nunca devuelve teléfonos y muestra el nombre recortado ("Juan P."). Los datos completos solo los ve el admin.
 
 ## Stack
@@ -64,6 +68,7 @@ En producción es **una sola app**: Nest sirve la API en `/api` y el build de Re
 Para personalizar más:
 
 - **Colores y fuentes:** al inicio de `frontend/src/index.css` (los de la demo son los del logo del Sinuano).
+- **Límites contra abuso:** `MAX_APARTADOS_POR_CELULAR` en `numeros.service.ts` y el `@Throttle` de `numeros.controller.ts`.
 - **Formato del celular:** la validación está en `backend/src/numeros/dto/apartar.dto.ts` y hoy acepta celulares de Colombia (10 dígitos que empiezan por 3).
 - **Cantidad de números:** el sistema está pensado para 00–99 (dos cifras de la lotería).
 
@@ -82,6 +87,7 @@ Van en `backend/.env` en local y en la configuración del hosting en producción
 | `WHATSAPP` | `573001234567` | WhatsApp del organizador, con indicativo, sin `+` ni espacios |
 | `INDICATIVO` | `57` | Indicativo del país de los compradores, para los links de WhatsApp del admin. Si no se pone, usa `57` |
 | `MINUTOS_APARTADO` | `120` | Cuánto dura un apartado sin pagar |
+| `ZONA_HORARIA` | `America/Bogota` | Zona horaria de las fechas en los CSV. Si no se pone, usa Bogotá |
 | `PORT` | `3000` | Solo en local. Render lo asigna solo |
 
 > Nunca subas el `.env` al repo (ya está en `.gitignore`).
@@ -119,7 +125,8 @@ paginarifa/
 │       └── numeros/
 │           ├── numero.entity.ts
 │           ├── sorteo.entity.ts        ← guarda el número ganador
-│           ├── numeros.service.ts      ← lógica: semilla, apartar, confirmar, liberar, ganador
+│           ├── movimiento.entity.ts    ← historial de todo lo que pasa (nunca se borra)
+│           ├── numeros.service.ts      ← lógica: apartar, confirmar, liberar, ganador, respaldos
 │           ├── numeros.controller.ts   ← rutas
 │           ├── admin.guard.ts          ← valida el header x-api-key
 │           └── dto/
@@ -145,12 +152,15 @@ paginarifa/
 |---|---|---|
 | GET | `/api/config` | Precio, premio, lotería, fecha, WhatsApp y ganador |
 | GET | `/api/numeros` | Los 100 números (sin teléfonos, nombre recortado) |
-| POST | `/api/apartar` | Body `{ numeros, nombre, telefono }`. Aparta o responde `409` |
+| POST | `/api/apartar` | Body `{ numeros, nombre, telefono }`. Aparta o responde `409`. Máx. 5 intentos por minuto |
 | GET | `/api/admin/numeros` | Todo, con teléfonos y si el apartado venció 🔒 |
 | POST | `/api/admin/confirmar/:n` | Marca el número como pagado 🔒 |
 | POST | `/api/admin/liberar/:n` | Deja el número libre otra vez 🔒 |
 | POST | `/api/admin/ganador` | Body `{ numero }`. Anuncia el ganador y cierra la rifa 🔒 |
 | DELETE | `/api/admin/ganador` | Quita el ganador (por si hubo un error) 🔒 |
+| GET | `/api/admin/historial` | Últimos 100 movimientos 🔒 |
+| GET | `/api/admin/respaldo/numeros` | CSV con el estado de los 100 números 🔒 |
+| GET | `/api/admin/respaldo/historial` | CSV con el historial completo 🔒 |
 
 🔒 = necesita el header `x-api-key` con el valor de `ADMIN_KEY`.
 
@@ -168,6 +178,17 @@ La demo corre gratis en **Render** (app) + **Neon** (PostgreSQL), pero sirve cua
 - **Auto-deploy:** cada `git push` a `main` publica la nueva versión en un par de minutos.
 
 **Para que no se duerma:** el plan gratis de Render apaga la app tras 15 minutos sin visitas (la siguiente visita tarda ~1 minuto). Un ping cada 10 minutos a `/api/config` (por ejemplo con cron-job.org) la mantiene despierta. Las 750 horas gratis al mes se comparten con los demás servicios de la cuenta; si tienes varios, programa el ping solo en las horas que más se usa.
+
+## Si la página se cae
+
+Los datos **no viven en la app**, viven en PostgreSQL (Neon), que es un servicio aparte. Si Render se cae, se duerme o un deploy falla, los apartados, pagos e historial siguen guardados y aparecen igual cuando la app vuelve.
+
+Para estar cubierto también si falla la base de datos:
+
+1. **Descarga el respaldo cada noche** desde el panel (números + historial). Con eso puedes reconstruir la rifa aunque se pierda todo.
+2. **Neon permite restaurar** la base de datos a un momento anterior (en el plan gratis, las últimas horas), desde su panel → *Restore*.
+3. **Activa las alertas del ping** en cron-job.org: si `/api/config` falla, te llega un correo antes de que te escriba un comprador.
+4. **Cambia la `ADMIN_KEY`** si crees que alguien más la vio. Se cambia en Render → Environment y la app se reinicia sola.
 
 ## El día del sorteo
 
