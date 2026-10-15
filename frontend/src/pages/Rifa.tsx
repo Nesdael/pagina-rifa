@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apartar, dosCifras, fechaLarga, getConfig, getNumeros, pesos, type ConfigRifa, type NumeroPublico } from '../api'
 import Cuadricula from '../components/Cuadricula'
 import FormApartar from '../components/FormApartar'
@@ -28,17 +28,44 @@ export default function Rifa() {
   const [error, setError] = useState<string | null>(null)
   const [mensajeWhatsapp, setMensajeWhatsapp] = useState('')
   const [apartados, setApartados] = useState<number[]>([])
+  // Números que tenía elegidos y que otra persona apartó primero (para avisar)
+  const [quitados, setQuitados] = useState<number[]>([])
 
-  const cargarNumeros = useCallback(async () => {
+  // Copia de la selección para leerla dentro de cargarNumeros sin recrearla
+  const seleccionadosRef = useRef<number[]>([])
+  seleccionadosRef.current = seleccionados
+
+  // Trae los números y devuelve los que se me quitaron porque alguien más los apartó
+  const cargarNumeros = useCallback(async (): Promise<number[]> => {
     try {
       const lista = await getNumeros()
       setNumeros(lista)
-      // Si alguien más apartó un número que yo tenía seleccionado, lo quito
-      setSeleccionados((sel) => sel.filter((n) => lista[n]?.estado === 'disponible'))
+      const sel = seleccionadosRef.current
+      const ocupados = sel.filter((n) => lista[n]?.estado !== 'disponible')
+      if (ocupados.length > 0) {
+        const quedan = sel.filter((n) => !ocupados.includes(n))
+        seleccionadosRef.current = quedan
+        setSeleccionados(quedan)
+        setQuitados(ocupados)
+      }
+      return ocupados
     } catch {
-      /* si falla un refresco, se intenta en el siguiente */
+      return [] // si falla un refresco, se intenta en el siguiente
     }
   }, [])
+
+  // Si me quitaron todos los números mientras llenaba el formulario, vuelvo a la cuadrícula
+  useEffect(() => {
+    if (paso === 'formulario' && seleccionados.length === 0) setPaso('eligiendo')
+  }, [paso, seleccionados])
+
+  // Antes de mostrar el formulario reviso que lo elegido siga libre,
+  // así el total que ve la persona es el real
+  async function irAlFormulario() {
+    setQuitados([])
+    await cargarNumeros()
+    if (seleccionadosRef.current.length > 0) setPaso('formulario')
+  }
 
   // Fondo de noche solo en la página de la rifa (el admin queda claro)
   useEffect(() => {
@@ -55,6 +82,7 @@ export default function Rifa() {
   }, [cargarNumeros])
 
   function toggle(numero: number) {
+    setQuitados([])
     setSeleccionados((sel) =>
       sel.includes(numero) ? sel.filter((n) => n !== numero) : [...sel, numero].sort((a, b) => a - b),
     )
@@ -73,16 +101,19 @@ export default function Rifa() {
         `de la rifa a nombre de ${nombre}. Total: ${pesos(lista.length * config.precio)}. ¿A dónde te pago?`
       setMensajeWhatsapp(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(texto)}`)
       setPaso('listo')
+      cargarNumeros()
     } catch (e) {
-      setError((e as Error).message)
+      // Si fue porque alguien apartó uno primero, el aviso de "quitados" ya lo explica
+      const ocupados = await cargarNumeros()
+      if (ocupados.length === 0) setError((e as Error).message)
     } finally {
       setEnviando(false)
-      cargarNumeros()
     }
   }
 
   function empezarOtraVez() {
     setSeleccionados([])
+    setQuitados([])
     setError(null)
     setPaso('eligiendo')
   }
@@ -111,7 +142,7 @@ export default function Rifa() {
               <span className="efectivo">en efectivo!</span>
             </h1>
             <div className="juega">
-              <img src="/sinuano-noche.png" alt={`Lotería ${config.loteria}`} width="600" height="335" />
+              <img src="/logo-loteria.png" alt={`Lotería ${config.loteria}`} width="600" height="335" />
               <p>
                 Juega el <strong>{fechaLarga(config.fechaSorteo)}</strong> con las dos últimas cifras del {config.loteria}.
               </p>
@@ -145,6 +176,15 @@ export default function Rifa() {
               : 'Ese número no se vendió.'}
           </p>
         </section>
+      )}
+
+      {quitados.length > 0 && paso !== 'listo' && (
+        <p className="aviso-quitados" role="alert">
+          {quitados.length === 1
+            ? `Otra persona acaba de apartar el ${dosCifras(quitados[0])}. Lo quitamos de tu selección.`
+            : `Otra persona acaba de apartar los números ${quitados.map(dosCifras).join(', ')}. Los quitamos de tu selección.`}
+          {seleccionados.length === 0 && ' Elige otros números.'}
+        </p>
       )}
 
       {paso === 'listo' ? (
@@ -194,7 +234,7 @@ export default function Rifa() {
             <strong>{seleccionados.length}</strong> {seleccionados.length === 1 ? 'número' : 'números'}
             <span> {pesos(seleccionados.length * config.precio)}</span>
           </p>
-          <button type="button" className="btn" onClick={() => setPaso('formulario')}>
+          <button type="button" className="btn" onClick={irAlFormulario}>
             Apartar
           </button>
         </div>

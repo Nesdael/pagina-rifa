@@ -286,6 +286,17 @@ button, input { font: inherit; color: inherit; }
 .muestra.apartado { background: var(--amarillo); }
 .muestra.pagado { background: transparent; border: 2px solid var(--fucsia); transform: rotate(-10deg); }
 
+/* Aviso cuando alguien apartó primero un número que tenía elegido */
+.aviso-quitados {
+  background: var(--amarillo);
+  color: var(--noche);
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  animation: aparecer 0.2s ease-out;
+}
+
 /* ---------- Barra inferior con la selección ---------- */
 .barra-seleccion {
   position: fixed;
@@ -591,6 +602,6 @@ body.noche .pagina > .error { color: var(--amarillo); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .barra-seleccion, .casilla.elegido, .dialogo[open], .aviso { animation: none; }
+  .barra-seleccion, .casilla.elegido, .dialogo[open], .aviso, .aviso-quitados { animation: none; }
   .progreso span { transition: none; }
 }
